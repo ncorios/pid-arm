@@ -1,8 +1,10 @@
 # PID theory notes
 
+# TODO before website writeup: pass through for typos
+
 Working notes from learning PID 
 
-big picture formula
+- [big_picture_formula]
 
 torque(e,theta)= K_p*e + K_i*integrator + K_d*de/dt + torque_ff(theta)
 
@@ -11,7 +13,7 @@ e = theta_d - theta (error)
 integrator += e * dt (integral/accumulated error)
 de/dt = rate of change of error, (D often also can be -K_d*dtheta/dt)
 torque_ff(theta) = torque computed from a model, not inherently standard but complements. pid can usually eliminate error without modeling
-## TODO
+
 - [error]:
     say our system has theta, our current angle, and theta_d, our desired angle. error (e) = desired angle - current angle. e = theta_d - theta. positive error means we under shot, needs to move forward. negative error means we over shot, we need to move back. every controller takes in error as an input to a function and outputs some change in the angle.
 - [proportional]
@@ -48,7 +50,7 @@ torque_ff(theta) = torque computed from a model, not inherently standard but com
 - [integral] 
     I term: why it kills steady-state error, windup
 
-    P (proportional) 
+    I (integral)
     torque_integral = k_i * integrator
     integrator += e * dt (error * timestep)
 
@@ -57,9 +59,11 @@ torque_ff(theta) = torque computed from a model, not inherently standard but com
 
     if we have a pretty good model of our system, then p + ff should take care of the majority of output, and then the i term will handle our disturbances. this is because i does not require a model, it uses pure error to calculate output and does not fall into steady state error. the integrator grows until e = 0, at which point the controller "learns" the torque required without any modeling. i alone is unstable. p handles fast transient errors, ff handles modeled dynamics, i handles smaller disturbances, residuals, steady state error, etc.
 
+    the integrator 'discovers' the steady-state torque by accumulation alone. no model required. this is why I works for any constant disturbance without modeling. 
+
     integral windup:
 
-    I has a probelm that formulas dont know: actuator saturation
+    I has a problem that formulas dont know: actuator saturation
     motors have limits on torque, when the integrator i is unlimited, the torque accumulated by the I term can grow past this limit. once theta_d is reached, and the p term contributes no torque, the I term produces much larger torque than needed, causing massive overshoot, and eventually oscillations.
 
     how do we fix this?
@@ -109,7 +113,7 @@ torque_ff(theta) = torque computed from a model, not inherently standard but com
     what does d do?
     smooths the transient response, reduces overshoot, damps
     doesnt kill steady state error (de/dt = 0)
-    d slows things down
+    d slows approach to setpoint. over tuned k_d makes system genuinely sluggish.
     d doesnt fix noise, it creates noise problems without filtering
 
     tuning k_d:
@@ -123,6 +127,97 @@ torque_ff(theta) = torque computed from a model, not inherently standard but com
     check signal-processing.md for noise and more
 
 
-- [ ] discretization: continuous → discrete-time form
-- [ ] anti-windup strategies
-- [ ] tuning intuition + Ziegler-Nichols
+- [discretization]: 
+    continuous → discrete-time form
+    formula is continous. integrals, derivatives break with discrete time. 
+    
+    what do we need to change to make this codeable?
+
+    P: 
+    fine, linear.
+
+    I: 
+    integrator += error * dt
+    tau_I = k_i * integrator
+    this is forward euler. fine for now. can do fancier if needed.
+
+    D:
+    e_dot = (e - e_prev) / dt
+    OR
+    tau_D = k_d * e_dot
+    theta_dot = (theta - theta_prev)/dt
+    tau_D = -k_d * theta_dot
+
+    dt needs to be atleast 10x faster than the fastest dynamic in your system (rule of thumb), but not too large that FE breaks.
+
+
+- [tuning_intuition_+_Ziegler-Nichols]
+    tuning is kinda vibes. theres formulas, but in practice its kinda just guess and adjust.
+
+    classical method:
+    Ziegler-Nichols
+    1. k_i = 0, k_d = 0, k_p = low
+    2. increase k_p until there are constant amplitude oscillations
+    3. record this as k_u, ultimate gain, and the period as t_u, ultimate period.
+    4. set with these tables:
+    | controller | Kp        | Ki              | Kd          |
+    |------------|-----------|-----------------|-------------|
+    | P only     | 0.5 * Ku  | —               | —           |
+    | PI         | 0.45 * Ku | 1.2 * Kp / Tu   | —           |
+    | PID        | 0.6 * Ku  | 2 * Kp / Tu     | Kp * Tu / 8 |
+
+    this gives a starting point. assumes first order dynamics + delay. 
+    finding K_u can damage hardware lol. 
+    works kinda but u can get better results with a simpler method.
+
+    practical method:
+     1. k_i = 0, k_d = 0, k_p = low
+     2. increase until fast response with maybe 20% overshoot. dont go to instability.
+     3. add k_d to kill overshoot. k_p/10, then increase until smooth response.
+     4. add k_i to kill steady state error. ki = kp/5, adjust based on how fast you want steady state error to die.
+
+    what to watch:
+    1. slow rise time, no overshoot means low k_p
+    2. fast rise, big overshoot, decaying oscillations, add k_d
+    3. steady state error, need k_i
+    4. slow oscillations that take forevver to die, k_i too high (windup/integrator instability)
+    5. buzzing/jittering, system runs hot. k_d high, d needs filtering
+
+    also can fix with feedforward, windup mitigation, filtering, etc so dont spend forever tuning if you havent done anything else.
+
+
+- [my_approach]
+    i would prob want to write something like this for the pid-arm
+    t = pid + t_ff
+
+    t_ff = torque_feedforward(theta) = mglsin(theta) for arm
+    this models basic gravity, makes our controller faster and compliments so I term can eliminate other constant distrubances we cant model without worrying abt gravity
+    not much noise so filter kinda just adding lag for no reason in a sim, but ill make it to where it can be turned on if needed when noise injected
+
+    so rought structure ( too lazy to write pseudocode):
+
+    lowpass:
+    alpha from cutoff frequency
+    current signal, update last signal
+    return alpha * signal + (1-alpha) * last signal
+
+    torque feed forward = model
+
+    pid:
+    def p (one line)
+    def i (integrator, t_i)
+    def d (derivative(filtered), t_d)
+
+    useful structure:
+    class PID:
+    def __init__(self, kp, ki, kd, dt, 
+                 tau_max=None,           # actuator limit
+                 use_anti_windup=False,
+                 d_filter_alpha=1.0):
+
+    whats good here is that i can use those flags off initially to toggle more advanced features, so removing filter from no noise sim for reduced lag, or not worrying abt windup for unlimited torque sim for intitial testing
+
+    main:
+    output = pid + tff
+    also graph error over time
+    
