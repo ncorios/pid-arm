@@ -42,21 +42,21 @@ class Arm:
         return (self.theta, self.theta_dot)
     
 
-if __name__ == "__main__":
-        # simple test of the arm dynamics
-        states = []
-        n = 5000 # n = timesteps
-        arm = Arm(m=1.0, l=1.0, g=9.81, b=0.1, theta = np.pi/2, dt=0.01) #initialize arm with mass=1kg, length=1m, gravity=9.81m/s^2, damping=0.1, initial angle= pi/2 radians, timestep=0.01s
-        for t in range(n):
-            state = arm.step(tau = 0) # apply zero torque, should see gravity oscillations + decay due to friction
-            # add state to a list for plotting
-            states.append(state)
+# if __name__ == "__main__":
+#         # simple test of the arm dynamics
+#         states = []
+#         n = 5000 # n = timesteps
+#         arm = Arm(m=1.0, l=1.0, g=9.81, b=0.1, theta = np.pi/2, dt=0.01) #initialize arm with mass=1kg, length=1m, gravity=9.81m/s^2, damping=0.1, initial angle= pi/2 radians, timestep=0.01s
+#         for t in range(n):
+#             state = arm.step(tau = 0) # apply zero torque, should see gravity oscillations + decay due to friction
+#             # add state to a list for plotting
+#             states.append(state)
 
-        states = np.array(states)
-        t = np.arange(n) * arm.dt
-        plt.plot(t, states[:,0], label='theta (rad)')
-        plt.plot(t, states[:,1], label='theta_dot (rad/s)')
-        plt.legend()
-        plt.title('Arm Dynamics under Gravity with Damping')
-        plt.xlabel('Time (s)')
-        plt.show()
+#         states = np.array(states)
+#         t = np.arange(n) * arm.dt
+#         plt.plot(t, states[:,0], label='theta (rad)')
+#         plt.plot(t, states[:,1], label='theta_dot (rad/s)')
+#         plt.legend()
+#         plt.title('Arm Dynamics under Gravity with Damping')
+#         plt.xlabel('Time (s)')
+#         plt.show()
