@@ -1,6 +1,6 @@
 # PID theory notes
 
-# TODO before website writeup: pass through for typos
+# TODO before website writeup: pass through for typos, comment code better, do math for saturation and real world asks of gains for pidf.
 
 Working notes from learning PID 
 

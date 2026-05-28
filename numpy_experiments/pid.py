@@ -55,9 +55,12 @@ if __name__ == "__main__":
     # plot
     fig, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
     
+    title = f"PID: Kp={pid.kp}, Ki={pid.ki}, Kd={pid.kd}"
+    fig.suptitle(title)
+
     axes[0].axhline(theta_d, color='k', linestyle='--', alpha=0.5, label='setpoint (pi/2 rad)')
     linear_prediction = arm.m * arm.g * arm.l / pid.kp #calculation for linear prediction of e_ss = mgl/kp
-    axes[0].axhline(.98, color='green', linestyle='--', alpha=0.5, label=f'linear ss prediction ({linear_prediction:.3f} rad)')
+    axes[0].axhline(linear_prediction, color='green', linestyle='--', alpha=0.5, label=f'linear ss prediction ({linear_prediction:.3f} rad)')
     axes[0].axhline(exact_settle, color='red', linestyle=':', alpha=0.8, label=f'exact ss pred. ({exact_settle:.3f} rad)')
     axes[0].plot(t_arr, states[:, 0], label='θ')
     axes[0].set_ylabel('angle (rad)')
