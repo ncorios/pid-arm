@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from control.control import PID
 from plants.arm import Arm
+from numpy_experiments import data_helpers
 
 # simple experiment to test the P term of the PID controller on the arm. We will apply a step input in desired angle and see how the arm responds under just P control.
 # the linear small error prediction is e_ss = mgl/kp which is around .98 rad. the actual reponse gives e_ss of around .84 rad
@@ -9,24 +10,7 @@ from plants.arm import Arm
 #k_p tuned to reflect steady state error, and the failure of linear approximation
 # longer run for convergence to steady state error
 
-#define function to save data
-def save_run(filename, t, states, taus, theta_d, arm, pid):
-    np.savez(
-        filename,
-        t=t,
-        theta=states[:, 0],
-        theta_dot=states[:, 1],
-        tau=taus,
-        setpoint=theta_d,
-        kp=pid.kp, ki=pid.ki, kd=pid.kd,
-        m=arm.m, l=arm.l, g=arm.g, b=arm.b, dt=arm.dt,
-    )
-# define function for exact e_ss using the non linear equation e_ss = theta_d - mgl*sin(theta_d - e_ss)/kp, can be solved iteratively
-def solve_ss(theta_d, mgl, kp, n_iter=100):
-    theta_ss = theta_d
-    for _ in range(n_iter):
-        theta_ss = theta_d - mgl * np.sin(theta_ss) / kp
-    return theta_ss
+
 
 
 if __name__ == "__main__":
@@ -36,7 +20,7 @@ if __name__ == "__main__":
     n = 100000 # n = timesteps
     pid = PID(kp=10.0, ki=0.0, kd=0.0, dt=arm.dt) # initialize PID controller with only P term
     theta_d = np.pi/2 # desired angle step input (90 degrees)
-    exact_settle = solve_ss(theta_d, arm.m * arm.g * arm.l, pid.kp) # solves exact e_ss
+    exact_settle = data_helpers.solve_ss(theta_d, arm.m * arm.g * arm.l, pid.kp) # solves exact e_ss
     for _ in range(n):
         pid.update_theta(arm.theta)
         tau = pid.calc_torque(theta_d)
@@ -70,4 +54,4 @@ if __name__ == "__main__":
     plt.savefig('outputs/plots/p_only.png', dpi=120)
     plt.show()
     
-    save_run('outputs/arrays/p_only.npz', t_arr, states, np.array(taus), theta_d, arm, pid) # save data for later analysis
+    data_helpers.save_run('outputs/arrays/p_only.npz', t_arr, states, np.array(taus), theta_d, arm, pid) # save data for later analysis

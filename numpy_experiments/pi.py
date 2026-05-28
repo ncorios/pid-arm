@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from control.control import PID
 from plants.arm import Arm
+from numpy_experiments import data_helpers
 
 # simple experiment to test the PI terms of the PID controller on the arm. We will apply a step input in desired angle and see how the arm responds under PI control.
 #k_p will be kept from last experiment to reflect steady state error, and the failure of linear approximation.
@@ -9,25 +10,6 @@ from plants.arm import Arm
 # lower n, smaller dt for forward euler stability
 # you should see non decaying oscillations around the setpoint. close to the setpoint, but needs k_d to dampen the oscillations.
 
-#define function to save data
-def save_run(filename, t, states, taus, theta_d, arm, pid):
-    np.savez(
-        filename,
-        t=t,
-        theta=states[:, 0],
-        theta_dot=states[:, 1],
-        tau=taus,
-        setpoint=theta_d,
-        kp=pid.kp, ki=pid.ki, kd=pid.kd,
-        m=arm.m, l=arm.l, g=arm.g, b=arm.b, dt=arm.dt,
-    )
-
-# define function for exact e_ss using the non linear equation e_ss = theta_d - mgl*sin(theta_d - e_ss)/kp, can be solved iteratively
-def solve_ss(theta_d, mgl, kp, n_iter=100):
-    theta_ss = theta_d
-    for _ in range(n_iter):
-        theta_ss = theta_d - mgl * np.sin(theta_ss) / kp
-    return theta_ss
 
 
 if __name__ == "__main__":
@@ -37,7 +19,7 @@ if __name__ == "__main__":
     n = 50000 # n = timesteps, lower than last experiment
     pid = PID(kp=10.0, ki=1.0, kd=0.0, dt=arm.dt) # initialize PID controller with kp from last experiment and add ki 
     theta_d = np.pi/2 # desired angle step input (90 degrees)
-    exact_settle = solve_ss(theta_d, arm.m * arm.g * arm.l, pid.kp) # solves exact e_ss
+    exact_settle = data_helpers.solve_ss(theta_d, arm.m * arm.g * arm.l, pid.kp) # solves exact e_ss
     for _ in range(n):
         pid.update_theta(arm.theta)
         tau = pid.calc_torque(theta_d)
@@ -71,5 +53,5 @@ if __name__ == "__main__":
     plt.savefig('outputs/plots/pi.png', dpi=120)
     plt.show()
     
-    save_run('outputs/arrays/pi.npz', t_arr, states, np.array(taus), theta_d, arm, pid) # save data for later analysis
+    data_helpers.save_run('outputs/arrays/pi.npz', t_arr, states, np.array(taus), theta_d, arm, pid) # save data for later analysis
 
