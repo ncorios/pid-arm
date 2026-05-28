@@ -23,7 +23,7 @@ class Arm:
         # advance the simulation by one timestep dt under applied torque tau.
         # return the new (theta, theta_dot).
         tau_gravity = self.m * self.g * self.l * np.sin(self.theta) #t_g = m * g * l * sin(theta)
-        tau_friction = self.b * self.theta_dot #t_f = b * theta_dot, where b is the damping coefficient
+        tau_friction = self.b * self.theta_dot #t_f = b * theta_dot, where b is the damping coefficient.
         tau_net = tau - tau_gravity - tau_friction
         theta_ddot = tau_net / (self.m * self.l**2) #theta_ddot = tau_net / I, where I = m * l^2 is the moment of inertia of the point mass at distance l
         self.theta_dot += theta_ddot * self.dt 
